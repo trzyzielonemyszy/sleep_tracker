@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edytuj Wpis - Śledzenie Snu Dziecka</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Edytuj Wpis</h1>
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label for="sleep_time">Czas zaśnięcia:</label>
+                <input type="datetime-local" id="sleep_time" name="sleep_time" 
+                       value="{{ record.sleep_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="wake_time">Czas pobudki:</label>
+                <input type="datetime-local" id="wake_time" name="wake_time" 
+                       value="{{ record.wake_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notatki:</label>
+                <input type="text" id="notes" name="notes" value="{{ record.notes }}">
+            </div>
+            
+            <button type="submit" class="button">Zapisz zmiany</button>
+            <a href="{{ url_for('index') }}" class="button secondary">Anuluj</a>
+        </form>
+    </div>
+</body>
+</html> 

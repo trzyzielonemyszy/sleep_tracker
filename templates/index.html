@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Śledzenie Snu Dziecka</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Śledzenie Snu Dziecka</h1>
+        
+        <div class="time-info">
+            <div class="time-box">
+                Od ostatniej drzemki minęło:
+            </div>
+            <div class="time-box time-value">
+                {% if time_since_last %}
+                    {{ time_since_last.hours }}h {{ time_since_last.minutes }}min
+                {% else %}
+                    Brak danych
+                {% endif %}
+            </div>
+            <div class="time-box date-picker-container">
+                <input type="date" id="dateFilter" name="date" 
+                       value="{{ selected_date.strftime('%Y-%m-%d') }}" 
+                       max="{{ today.strftime('%Y-%m-%d') }}">
+            </div>
+        </div>
+
+        <div class="nap-control">
+            <div class="nap-info">
+                <h2>Drzemka nr {{ naps_today + 1 }}</h2>
+            </div>
+            <div class="nap-buttons">
+                <button onclick="toggleNap()" id="napButton" class="button primary">START</button>
+                <a href="{{ url_for('add_record') }}" class="button">Dodaj wpis</a>
+            </div>
+        </div>
+
+        <div id="timer-container" class="timer-container" style="display: none;">
+            <div class="timer-box">
+                <div class="timer-label">Czas trwania drzemki:</div>
+                <div class="timer-value">
+                    <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="records">
+            {% for record in records %}
+            <div class="record-card">
+                <h3>{{ record.notes }}</h3>
+                <p>Czas: {{ record.sleep_time.strftime('%H:%M') }} - {{ record.wake_time.strftime('%H:%M') }}</p>
+                <p class="duration">Długość drzemki: 
+                    {% set duration = (record.wake_time - record.sleep_time).total_seconds() %}
+                    {% set hours = (duration // 3600) | int %}
+                    {% set minutes = ((duration % 3600) // 60) | int %}
+                    {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}min
+                </p>
+                <div class="record-actions">
+                    <a href="{{ url_for('edit_record', record_id=record.id) }}" class="button small">Edytuj</a>
+                    <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" class="inline-form">
+                        <button type="submit" class="button small danger" onclick="return confirm('Czy na pewno chcesz usunąć ten wpis?')">Usuń</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html> 

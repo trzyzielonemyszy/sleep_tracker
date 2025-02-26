@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodaj Wpis - Śledzenie Snu Dziecka</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Dodaj Nowy Wpis</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label for="sleep_time">Czas zaśnięcia:</label>
+                <input type="datetime-local" id="sleep_time" name="sleep_time" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="wake_time">Czas pobudki:</label>
+                <input type="datetime-local" id="wake_time" name="wake_time" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notatki:</label>
+                <textarea id="notes" name="notes" rows="4"></textarea>
+            </div>
+            
+            <button type="submit" class="button">Zapisz</button>
+            <a href="{{ url_for('index') }}" class="button secondary">Anuluj</a>
+        </form>
+    </div>
+</body>
+</html> 
