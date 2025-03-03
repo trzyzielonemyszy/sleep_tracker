@@ -19,7 +19,7 @@ __pycache__/
 .idea/
 
 # Environment variables
-.env
+#.env
 
 # Logs
 *.log
