@@ -28,6 +28,7 @@ function toggleNap() {
     } else {
         // Stop nap
         const endTime = new Date();
+        
         fetch('/stop_nap', {
             method: 'POST',
             headers: {
@@ -62,7 +63,9 @@ function stopTimer() {
 function updateTimer() {
     if (!napStartTime) return;
 
+    // Pobierz aktualny czas
     const now = new Date();
+    
     // Obliczamy różnicę w milisekundach
     const diff = Math.max(0, now - napStartTime);
     

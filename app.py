@@ -22,6 +22,17 @@ db = SQLAlchemy(app)
 # Dodaj strefę czasową dla Polski
 local_tz = pytz.timezone('Europe/Warsaw')
 
+# Funkcja zwracająca aktualny czas w strefie czasowej warszawskiej
+def get_current_warsaw_time():
+    # Zamiast używać datetime.now(pytz.UTC), użyjmy datetime.utcnow()
+    # i jawnie ustawmy strefę czasową UTC
+    utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+    
+    # Konwertuj do strefy czasowej warszawskiej
+    warsaw_time = utc_now.astimezone(local_tz)
+    
+    return warsaw_time
+
 class SleepRecord(db.Model):
     """Model for sleep records"""
     __tablename__ = 'sleep_records'
@@ -44,7 +55,8 @@ def index():
     try:
         # Get selected date from query parameters or use today
         selected_date_str = request.args.get('date')
-        today = datetime.now().date()
+        # Używamy aktualnego czasu w strefie czasowej warszawskiej
+        today = get_current_warsaw_time().date()
         
         if selected_date_str:
             selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
@@ -66,7 +78,9 @@ def index():
         # Calculate time since last nap only for today
         if today == selected_date and records:
             last_wake = records[0].wake_time
-            time_diff = datetime.now() - last_wake
+            # Używamy aktualnego czasu w strefie czasowej warszawskiej
+            current_time = get_current_warsaw_time().replace(tzinfo=None)
+            time_diff = current_time - last_wake
             hours = int(time_diff.total_seconds() // 3600)
             minutes = int((time_diff.total_seconds() % 3600) // 60)
             time_since_last = {'hours': hours, 'minutes': minutes}
@@ -113,8 +127,8 @@ def add_record():
 def start_nap():
     """Start new nap"""
     try:
-        # Pobierz aktualny czas w strefie czasowej UTC i przekonwertuj na lokalny
-        start_time = datetime.now(pytz.UTC).astimezone(local_tz)
+        # Używamy aktualnego czasu w strefie czasowej warszawskiej
+        start_time = get_current_warsaw_time()
         return jsonify({
             'status': 'success',
             'start_time': start_time.isoformat()
@@ -128,16 +142,20 @@ def stop_nap():
     """Stop nap and save record"""
     try:
         data = request.get_json()
+        
         # Konwertuj czasy do lokalnej strefy czasowej
-        sleep_time = datetime.fromisoformat(data['start_time'])
-        wake_time = datetime.fromisoformat(data['end_time'])
+        sleep_time_str = data['start_time']
+        sleep_time = datetime.fromisoformat(sleep_time_str.replace('Z', '+00:00'))
+        
+        # Używamy aktualnego czasu w strefie czasowej warszawskiej
+        wake_time = get_current_warsaw_time()
         
         # Usuń informację o strefie czasowej, ale zachowaj lokalny czas
         sleep_time = sleep_time.replace(tzinfo=None)
         wake_time = wake_time.replace(tzinfo=None)
         
         # Policz dzisiejsze drzemki
-        today = datetime.now(local_tz).date()
+        today = get_current_warsaw_time().date()
         naps_today = SleepRecord.query.filter(
             SleepRecord.sleep_time >= today,
             SleepRecord.sleep_time < today + timedelta(days=1)
