@@ -14,7 +14,11 @@ function toggleNap() {
         .then(data => {
             if (data.status === 'success') {
                 // Konwertujemy string na obiekt Date
+                // JavaScript automatycznie obsłuży strefę czasową z ISO string
                 napStartTime = new Date(data.start_time);
+                console.log('Nap start time (local):', napStartTime.toLocaleString());
+                console.log('Nap start time (ISO):', napStartTime.toISOString());
+                
                 button.textContent = 'STOP';
                 button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
                 timerContainer.style.display = 'block';

@@ -129,6 +129,9 @@ def start_nap():
     try:
         # Używamy aktualnego czasu w strefie czasowej warszawskiej
         start_time = get_current_warsaw_time()
+        
+        # Zwracamy czas w formacie ISO z informacją o strefie czasowej
+        # Dzięki temu przeglądarka będzie wiedziała, że to czas w strefie warszawskiej
         return jsonify({
             'status': 'success',
             'start_time': start_time.isoformat()
@@ -145,12 +148,26 @@ def stop_nap():
         
         # Konwertuj czasy do lokalnej strefy czasowej
         sleep_time_str = data['start_time']
-        sleep_time = datetime.fromisoformat(sleep_time_str.replace('Z', '+00:00'))
+        
+        # Poprawiona konwersja czasu - zakładamy, że czas przychodzący jest już w strefie czasowej warszawskiej
+        # ale został przekonwertowany do ISO format, więc musimy go prawidłowo zinterpretować
+        if 'Z' in sleep_time_str:
+            # Jeśli czas zawiera 'Z', oznacza to czas UTC
+            sleep_time = datetime.fromisoformat(sleep_time_str.replace('Z', '+00:00'))
+            sleep_time = sleep_time.astimezone(local_tz)
+        elif '+' in sleep_time_str or '-' in sleep_time_str[-6:]:
+            # Jeśli czas zawiera informację o strefie czasowej
+            sleep_time = datetime.fromisoformat(sleep_time_str)
+            sleep_time = sleep_time.astimezone(local_tz)
+        else:
+            # Jeśli czas nie zawiera informacji o strefie czasowej, zakładamy że jest w lokalnej strefie
+            sleep_time = datetime.fromisoformat(sleep_time_str)
+            sleep_time = sleep_time.replace(tzinfo=local_tz)
         
         # Używamy aktualnego czasu w strefie czasowej warszawskiej
         wake_time = get_current_warsaw_time()
         
-        # Usuń informację o strefie czasowej, ale zachowaj lokalny czas
+        # Zapisujemy czas bez informacji o strefie czasowej, ale zachowujemy lokalny czas warszawski
         sleep_time = sleep_time.replace(tzinfo=None)
         wake_time = wake_time.replace(tzinfo=None)
         
