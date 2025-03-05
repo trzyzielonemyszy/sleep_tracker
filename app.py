@@ -41,6 +41,8 @@ class SleepRecord(db.Model):
     sleep_time = db.Column(db.DateTime, nullable=False)
     wake_time = db.Column(db.DateTime, nullable=False)
     notes = db.Column(db.String(200))
+    sleep_rating = db.Column(db.Integer, nullable=True)  # Rating from 1-5 stars
+    is_rated = db.Column(db.Boolean, default=False)  # Flag to track if sleep has been rated
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -240,16 +242,27 @@ def stop_nap():
         record = SleepRecord(
             sleep_time=sleep_time,
             wake_time=wake_time,
-            notes=notes
+            notes=notes,
+            is_rated=False  # Domyślnie sen nie jest oceniony
         )
         
         db.session.add(record)
         db.session.commit()
         
-        return jsonify({
-            'status': 'success',
-            'message': 'Drzemka zapisana'
-        })
+        # Jeśli to sen nocny, zwróć ID rekordu, aby można było przekierować do oceny
+        if sleep_duration > 4:
+            return jsonify({
+                'status': 'success',
+                'message': 'Sen nocny zapisany',
+                'is_night_sleep': True,
+                'record_id': record.id
+            })
+        else:
+            return jsonify({
+                'status': 'success',
+                'message': 'Drzemka zapisana',
+                'is_night_sleep': False
+            })
     except Exception as e:
         app.logger.error(f"Error saving nap: {str(e)}")
         db.session.rollback()
@@ -277,6 +290,16 @@ def edit_record(record_id):
             record.sleep_time = datetime.strptime(request.form['sleep_time'], '%Y-%m-%dT%H:%M')
             record.wake_time = datetime.strptime(request.form['wake_time'], '%Y-%m-%dT%H:%M')
             record.notes = request.form['notes']
+            
+            # Handle sleep rating if provided
+            if 'rating' in request.form and request.form['rating']:
+                try:
+                    rating = int(request.form['rating'])
+                    if 1 <= rating <= 5:
+                        record.sleep_rating = rating
+                        record.is_rated = True
+                except ValueError:
+                    pass
             
             if record.wake_time <= record.sleep_time:
                 return render_template('edit.html', record=record, error="Czas pobudki musi być późniejszy niż czas zaśnięcia.")
@@ -312,6 +335,33 @@ def edit_record(record_id):
             return render_template('edit.html', record=record, error="Wystąpił błąd podczas edycji wpisu.")
     
     return render_template('edit.html', record=record)
+
+@app.route('/rate_sleep/<int:record_id>', methods=['GET', 'POST'])
+def rate_sleep(record_id):
+    """Rate sleep quality"""
+    record = SleepRecord.query.get_or_404(record_id)
+    
+    # Check if this is a night sleep (longer than 4 hours)
+    sleep_duration = (record.wake_time - record.sleep_time).total_seconds() / 3600
+    if sleep_duration <= 4:
+        return render_template('error.html', message="Tylko sen nocny może być oceniony.")
+    
+    if request.method == 'POST':
+        try:
+            rating = int(request.form['rating'])
+            if 1 <= rating <= 5:
+                record.sleep_rating = rating
+                record.is_rated = True
+                db.session.commit()
+                return redirect(url_for('index'))
+            else:
+                return render_template('rate_sleep.html', record=record, error="Ocena musi być w zakresie 1-5.")
+        except Exception as e:
+            app.logger.error(f"Error rating sleep: {str(e)}")
+            db.session.rollback()
+            return render_template('rate_sleep.html', record=record, error="Wystąpił błąd podczas oceny snu.")
+    
+    return render_template('rate_sleep.html', record=record)
 
 @app.errorhandler(404)
 def not_found_error(error):

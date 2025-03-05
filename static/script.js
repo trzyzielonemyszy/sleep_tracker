@@ -47,7 +47,17 @@ function toggleNap() {
         .then(data => {
             if (data.status === 'success') {
                 stopTimer();
-                window.location.href = '/';  // Wracamy na stronę główną
+                
+                // Jeśli to sen nocny, zapytaj czy chce ocenić sen teraz
+                if (data.is_night_sleep) {
+                    if (confirm('Czy chcesz ocenić jakość snu teraz?')) {
+                        window.location.href = '/rate_sleep/' + data.record_id;
+                    } else {
+                        window.location.href = '/';  // Wracamy na stronę główną
+                    }
+                } else {
+                    window.location.href = '/';  // Wracamy na stronę główną
+                }
             }
         })
         .catch(error => console.error('Error:', error));

@@ -59,6 +59,25 @@
                     {% set minutes = ((duration % 3600) // 60) | int %}
                     {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}min
                 </p>
+                
+                {% if (duration / 3600) > 4 %}
+                    <div class="sleep-rating">
+                        {% if record.is_rated %}
+                            <p>Ocena snu: 
+                                {% for i in range(1, 6) %}
+                                    {% if i <= record.sleep_rating %}
+                                        <span class="star filled">★</span>
+                                    {% else %}
+                                        <span class="star">☆</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% else %}
+                            <a href="{{ url_for('rate_sleep', record_id=record.id) }}" class="button small">Oceń sen</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
                 <div class="record-actions">
                     <a href="{{ url_for('edit_record', record_id=record.id) }}" class="button small">Edytuj</a>
                     <form method="POST" action="{{ url_for('delete_record', record_id=record.id) }}" class="inline-form">

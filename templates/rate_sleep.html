@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edytuj Wpis - Śledzenie Snu Dziecka</title>
+    <title>Oceń Sen - Śledzenie Snu Dziecka</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .star-rating {
             display: flex;
-            margin: 10px 0;
+            justify-content: center;
+            margin: 20px 0;
             flex-direction: row;
         }
         
@@ -17,10 +18,10 @@
         }
         
         .star-rating label {
-            font-size: 30px;
+            font-size: 40px;
             color: #ddd;
             cursor: pointer;
-            padding: 3px;
+            padding: 5px;
         }
         
         .star-rating input:checked ~ label {
@@ -70,48 +71,42 @@
 </head>
 <body>
     <div class="container">
-        <h1>Edytuj Wpis</h1>
+        <h1>Oceń Sen</h1>
+        
         {% if error %}
         <div class="error-message">{{ error }}</div>
         {% endif %}
+        
+        <div class="sleep-info">
+            <h3>{{ record.notes }}</h3>
+            <p>Data: {{ record.sleep_time.strftime('%d.%m.%Y') }}</p>
+            <p>Czas: {{ record.sleep_time.strftime('%H:%M') }} - {{ record.wake_time.strftime('%H:%M') }}</p>
+            <p class="duration">Długość snu: 
+                {% set duration = (record.wake_time - record.sleep_time).total_seconds() %}
+                {% set hours = (duration // 3600) | int %}
+                {% set minutes = ((duration % 3600) // 60) | int %}
+                {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}min
+            </p>
+        </div>
+        
         <form method="POST">
             <div class="form-group">
-                <label for="sleep_time">Czas zaśnięcia:</label>
-                <input type="datetime-local" id="sleep_time" name="sleep_time" 
-                       value="{{ record.sleep_time.strftime('%Y-%m-%dT%H:%M') }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="wake_time">Czas pobudki:</label>
-                <input type="datetime-local" id="wake_time" name="wake_time" 
-                       value="{{ record.wake_time.strftime('%Y-%m-%dT%H:%M') }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Notatki:</label>
-                <input type="text" id="notes" name="notes" value="{{ record.notes }}">
-            </div>
-            
-            {% set duration = (record.wake_time - record.sleep_time).total_seconds() %}
-            {% if (duration / 3600) > 4 %}
-                <div class="form-group">
-                    <label>Ocena jakości snu:</label>
-                    <div class="star-rating">
-                        <input type="radio" id="star1" name="rating" value="1" {% if record.sleep_rating == 1 %}checked{% endif %} />
-                        <label for="star1">★</label>
-                        <input type="radio" id="star2" name="rating" value="2" {% if record.sleep_rating == 2 %}checked{% endif %} />
-                        <label for="star2">★</label>
-                        <input type="radio" id="star3" name="rating" value="3" {% if record.sleep_rating == 3 %}checked{% endif %} />
-                        <label for="star3">★</label>
-                        <input type="radio" id="star4" name="rating" value="4" {% if record.sleep_rating == 4 %}checked{% endif %} />
-                        <label for="star4">★</label>
-                        <input type="radio" id="star5" name="rating" value="5" {% if record.sleep_rating == 5 %}checked{% endif %} />
-                        <label for="star5">★</label>
-                    </div>
+                <label>Jak oceniasz jakość snu?</label>
+                <div class="star-rating">
+                    <input type="radio" id="star1" name="rating" value="1" />
+                    <label for="star1">★</label>
+                    <input type="radio" id="star2" name="rating" value="2" />
+                    <label for="star2">★</label>
+                    <input type="radio" id="star3" name="rating" value="3" />
+                    <label for="star3">★</label>
+                    <input type="radio" id="star4" name="rating" value="4" />
+                    <label for="star4">★</label>
+                    <input type="radio" id="star5" name="rating" value="5" />
+                    <label for="star5">★</label>
                 </div>
-            {% endif %}
+            </div>
             
-            <button type="submit" class="button">Zapisz zmiany</button>
+            <button type="submit" class="button">Zapisz ocenę</button>
             <a href="{{ url_for('index') }}" class="button secondary">Anuluj</a>
         </form>
     </div>
