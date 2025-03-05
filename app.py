@@ -67,23 +67,47 @@ def index():
         start_of_day = datetime.combine(selected_date, datetime.min.time())
         end_of_day = datetime.combine(selected_date, datetime.max.time())
         
-        records = SleepRecord.query.filter(
-            SleepRecord.sleep_time >= start_of_day,
-            SleepRecord.sleep_time <= end_of_day
-        ).order_by(SleepRecord.sleep_time.desc()).all()
-
+        # Pobierz rekordy, które:
+        # 1. Są drzemkami (krótsze niż 4h) i zaczynają się w wybranym dniu
+        # 2. Są snem nocnym (dłuższe niż 4h) i kończą się w wybranym dniu
+        records = []
+        
+        # Najpierw pobierz wszystkie rekordy, które mogą być związane z wybranym dniem
+        all_possible_records = SleepRecord.query.filter(
+            ((SleepRecord.sleep_time >= start_of_day) & (SleepRecord.sleep_time <= end_of_day)) |  # zaczynają się w wybranym dniu
+            ((SleepRecord.wake_time >= start_of_day) & (SleepRecord.wake_time <= end_of_day))      # kończą się w wybranym dniu
+        ).all()
+        
+        # Następnie przefiltruj je zgodnie z zasadami
+        for record in all_possible_records:
+            # Oblicz czas trwania snu w godzinach
+            sleep_duration = (record.wake_time - record.sleep_time).total_seconds() / 3600
+            
+            # Jeśli to drzemka (krótszy niż 4h), sprawdź czy zaczyna się w wybranym dniu
+            if sleep_duration <= 4 and record.sleep_time.date() == selected_date:
+                records.append(record)
+            # Jeśli to sen nocny (dłuższy niż 4h), sprawdź czy kończy się w wybranym dniu
+            elif sleep_duration > 4 and record.wake_time.date() == selected_date:
+                records.append(record)
+        
+        # Sortuj rekordy według czasu rozpoczęcia, od najnowszego
+        records.sort(key=lambda x: x.sleep_time, reverse=True)
+        
         time_since_last = None
-        naps_today = len(records)
+        naps_today = len([r for r in records if (r.wake_time - r.sleep_time).total_seconds() / 3600 <= 4])
         
         # Calculate time since last nap only for today
         if today == selected_date and records:
-            last_wake = records[0].wake_time
-            # Używamy aktualnego czasu w strefie czasowej warszawskiej
-            current_time = get_current_warsaw_time().replace(tzinfo=None)
-            time_diff = current_time - last_wake
-            hours = int(time_diff.total_seconds() // 3600)
-            minutes = int((time_diff.total_seconds() % 3600) // 60)
-            time_since_last = {'hours': hours, 'minutes': minutes}
+            # Znajdź ostatni rekord (drzemkę lub sen nocny) zakończony dzisiaj
+            today_records = [r for r in records if r.wake_time.date() == today]
+            if today_records:
+                last_wake = today_records[0].wake_time
+                # Używamy aktualnego czasu w strefie czasowej warszawskiej
+                current_time = get_current_warsaw_time().replace(tzinfo=None)
+                time_diff = current_time - last_wake
+                hours = int(time_diff.total_seconds() // 3600)
+                minutes = int((time_diff.total_seconds() % 3600) // 60)
+                time_since_last = {'hours': hours, 'minutes': minutes}
             
         return render_template('index.html', 
                              records=records, 
@@ -106,6 +130,28 @@ def add_record():
 
             if wake_time <= sleep_time:
                 return render_template('add.html', error="Czas pobudki musi być późniejszy niż czas zaśnięcia.")
+            
+            # Oblicz czas trwania snu w godzinach
+            sleep_duration = (wake_time - sleep_time).total_seconds() / 3600
+            
+            # Sprawdź, czy notatki są puste lub zawierają standardowy opis
+            is_standard_note = not notes.strip() or notes.strip() == "Sen nocny" or notes.strip().startswith("Drzemka nr")
+            
+            # Jeśli notatki są puste lub zawierają standardowy opis, automatycznie określ typ snu
+            if is_standard_note:
+                if sleep_duration > 4:
+                    notes = "Sen nocny"
+                else:
+                    # Dla drzemek liczymy drzemki z dnia rozpoczęcia
+                    today = sleep_time.date()
+                    # Policz dzisiejsze drzemki
+                    naps_today = SleepRecord.query.filter(
+                        SleepRecord.sleep_time >= datetime.combine(today, datetime.min.time()),
+                        SleepRecord.sleep_time < datetime.combine(today, datetime.max.time()),
+                        (SleepRecord.wake_time - SleepRecord.sleep_time) <= timedelta(hours=4)  # tylko drzemki
+                    ).count()
+                    
+                    notes = f"Drzemka nr {naps_today + 1}"
             
             record = SleepRecord(
                 sleep_time=sleep_time,
@@ -171,14 +217,25 @@ def stop_nap():
         sleep_time = sleep_time.replace(tzinfo=None)
         wake_time = wake_time.replace(tzinfo=None)
         
-        # Policz dzisiejsze drzemki
-        today = get_current_warsaw_time().date()
-        naps_today = SleepRecord.query.filter(
-            SleepRecord.sleep_time >= today,
-            SleepRecord.sleep_time < today + timedelta(days=1)
-        ).count()
+        # Oblicz czas trwania snu w godzinach
+        sleep_duration = (wake_time - sleep_time).total_seconds() / 3600
         
-        notes = f"Drzemka nr {naps_today + 1}"
+        # Określ opis na podstawie czasu trwania snu
+        if sleep_duration > 4:
+            notes = "Sen nocny"
+            # Dla snu nocnego liczymy drzemki z dnia zakończenia
+            today = wake_time.date()
+        else:
+            # Dla drzemek liczymy drzemki z dnia rozpoczęcia
+            today = sleep_time.date()
+            # Policz dzisiejsze drzemki
+            naps_today = SleepRecord.query.filter(
+                SleepRecord.sleep_time >= datetime.combine(today, datetime.min.time()),
+                SleepRecord.sleep_time < datetime.combine(today, datetime.max.time()),
+                (SleepRecord.wake_time - SleepRecord.sleep_time) <= timedelta(hours=4)  # tylko drzemki
+            ).count()
+            
+            notes = f"Drzemka nr {naps_today + 1}"
         
         record = SleepRecord(
             sleep_time=sleep_time,
@@ -223,6 +280,29 @@ def edit_record(record_id):
             
             if record.wake_time <= record.sleep_time:
                 return render_template('edit.html', record=record, error="Czas pobudki musi być późniejszy niż czas zaśnięcia.")
+            
+            # Oblicz czas trwania snu w godzinach
+            sleep_duration = (record.wake_time - record.sleep_time).total_seconds() / 3600
+            
+            # Sprawdź, czy notatki są puste lub zawierają standardowy opis
+            is_standard_note = not record.notes.strip() or record.notes.strip() == "Sen nocny" or record.notes.strip().startswith("Drzemka nr")
+            
+            # Jeśli notatki są puste lub zawierają standardowy opis, automatycznie zaktualizuj opis
+            if is_standard_note:
+                if sleep_duration > 4:
+                    record.notes = "Sen nocny"
+                else:
+                    # Dla drzemek liczymy drzemki z dnia rozpoczęcia
+                    today = record.sleep_time.date()
+                    # Policz dzisiejsze drzemki
+                    naps_today = SleepRecord.query.filter(
+                        SleepRecord.sleep_time >= datetime.combine(today, datetime.min.time()),
+                        SleepRecord.sleep_time < datetime.combine(today, datetime.max.time()),
+                        (SleepRecord.wake_time - SleepRecord.sleep_time) <= timedelta(hours=4),  # tylko drzemki
+                        SleepRecord.id != record_id  # Wykluczamy aktualny rekord
+                    ).count()
+                    
+                    record.notes = f"Drzemka nr {naps_today + 1}"
             
             db.session.commit()
             return redirect(url_for('index'))
