@@ -14,14 +14,29 @@
         <div class="time-info">
             <div class="time-box">
                 Od ostatniej drzemki minęło:
+                <div class="time-value">
+                    {% if time_since_last %}
+                        {{ time_since_last.hours }}h {{ time_since_last.minutes }}min
+                    {% else %}
+                        Brak danych
+                    {% endif %}
+                </div>
             </div>
-            <div class="time-box time-value">
-                {% if time_since_last %}
-                    {{ time_since_last.hours }}h {{ time_since_last.minutes }}min
-                {% else %}
-                    Brak danych
-                {% endif %}
+            
+            <div class="time-box">
+                Suma godzin drzemek:
+                <div class="time-value">
+                    {% if naps_today > 0 %}
+                        {{ total_nap_hours }}h {{ total_nap_minutes }}min
+                    {% else %}
+                        0h 0min
+                    {% endif %}
+                </div>
+                <div class="nap-count">
+                    Liczba drzemek: {{ naps_today }}
+                </div>
             </div>
+            
             <div class="time-box date-picker-container">
                 <input type="date" id="dateFilter" name="date" 
                        value="{{ selected_date.strftime('%Y-%m-%d') }}" 

@@ -96,7 +96,24 @@ def index():
         records.sort(key=lambda x: x.sleep_time, reverse=True)
         
         time_since_last = None
-        naps_today = len([r for r in records if (r.wake_time - r.sleep_time).total_seconds() / 3600 <= 4])
+        
+        # Oblicz liczbę drzemek i sumę godzin drzemek dla wybranego dnia
+        naps_today = 0
+        total_nap_hours = 0
+        total_nap_minutes = 0
+        
+        for record in records:
+            sleep_duration = (record.wake_time - record.sleep_time).total_seconds()
+            # Jeśli to drzemka (krótszy niż 4h)
+            if sleep_duration <= 4 * 3600:
+                naps_today += 1
+                total_nap_hours += int(sleep_duration // 3600)
+                total_nap_minutes += int((sleep_duration % 3600) // 60)
+        
+        # Konwertuj nadmiarowe minuty na godziny
+        if total_nap_minutes >= 60:
+            total_nap_hours += total_nap_minutes // 60
+            total_nap_minutes = total_nap_minutes % 60
         
         # Calculate time since last nap only for today
         if today == selected_date and records:
@@ -115,6 +132,8 @@ def index():
                              records=records, 
                              time_since_last=time_since_last,
                              naps_today=naps_today,
+                             total_nap_hours=total_nap_hours,
+                             total_nap_minutes=total_nap_minutes,
                              selected_date=selected_date,
                              today=today)
     except Exception as e:
