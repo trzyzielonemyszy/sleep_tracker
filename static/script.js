@@ -10,17 +10,30 @@ function getUrlParameter(name) {
 }
 
 function toggleNap() {
+    console.log('toggleNap called');
+    
     const button = document.getElementById('napButton');
     const timerContainer = document.getElementById('timer-container');
     const selectedDate = getUrlParameter('date');
 
+    // Sprawdź, czy przycisk nie jest wyłączony
+    if (button.disabled || button.classList.contains('disabled')) {
+        console.log('Button is disabled, cannot start nap on non-current date');
+        return;
+    }
+
     if (button.textContent === 'START') {
+        console.log('Starting nap...');
         // Start nap
         fetch('/start_nap', {
             method: 'POST',
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Start nap fetch response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Start nap response data:', data);
             if (data.status === 'success') {
                 // Konwertujemy string na obiekt Date
                 // JavaScript automatycznie obsłuży strefę czasową z ISO string
@@ -39,10 +52,17 @@ function toggleNap() {
                 
                 // Resetujemy licznik
                 updateTimer();
+            } else {
+                console.error('Error in start_nap response:', data.message || 'Unknown error');
+                alert('Wystąpił błąd podczas rozpoczynania drzemki.');
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error fetching start_nap:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        });
     } else {
+        console.log('Stopping nap...');
         // Stop nap
         const endTime = new Date();
         
@@ -56,8 +76,12 @@ function toggleNap() {
                 end_time: endTime.toISOString()
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Stop nap fetch response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Stop nap response data:', data);
             if (data.status === 'success') {
                 stopTimer();
                 
@@ -75,9 +99,15 @@ function toggleNap() {
                 } else {
                     window.location.href = '/' + (selectedDate ? '?date=' + selectedDate : '');  // Wracamy na stronę główną
                 }
+            } else {
+                console.error('Error in stop_nap response:', data.message || 'Unknown error');
+                alert('Wystąpił błąd podczas kończenia drzemki.');
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error fetching stop_nap:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        });
     }
 }
 
@@ -114,7 +144,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Obsługa filtra daty
     const dateFilter = document.getElementById('dateFilter');
     const selectedDate = getUrlParameter('date');
-    const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+    
+    // Formatowanie dzisiejszej daty jako YYYY-MM-DD
+    const now = new Date();
+    const today = now.getFullYear() + '-' + 
+                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(now.getDate()).padStart(2, '0');
+    
+    // Obsługa przycisku napButton
+    const napButton = document.getElementById('napButton');
+    if (napButton) {
+        // Sprawdź czy jesteśmy na dzisiejszej dacie
+        if (selectedDate && selectedDate !== today) {
+            // Nie jesteśmy na dzisiejszej dacie - wyłącz przycisk
+            napButton.classList.add('disabled');
+            napButton.disabled = true;
+            console.log('Button disabled - not today\'s date');
+        } else {
+            // Jesteśmy na dzisiejszej dacie - włącz przycisk
+            napButton.classList.remove('disabled');
+            napButton.disabled = false;
+            // Dodaj obsługę zdarzenia onclick
+            napButton.onclick = toggleNap;
+            console.log('Button enabled - today\'s date');
+        }
+    }
     
     if (dateFilter) {
         dateFilter.addEventListener('change', function() {
@@ -145,12 +199,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Sprawdź, czy jesteśmy na dzisiejszej dacie - tylko wtedy pokaż aktywną drzemkę
             if (!selectedDate || selectedDate === today) {
                 napStartTime = new Date(storedStartTime);
-                const button = document.getElementById('napButton');
                 const timerContainer = document.getElementById('timer-container');
                 
-                if (button && timerContainer) {
-                    button.textContent = 'STOP';
-                    button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
+                if (napButton && timerContainer) {
+                    napButton.textContent = 'STOP';
+                    napButton.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
                     timerContainer.style.display = 'block';
                     startTimer();
                     updateTimer();
@@ -160,6 +213,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Dodajmy informację dla użytkownika
                 const napControl = document.querySelector('.nap-control');
                 if (napControl) {
+                    // Usuń istniejące alerty, żeby nie duplikować
+                    const existingAlerts = napControl.querySelectorAll('.alert');
+                    existingAlerts.forEach(alert => alert.remove());
+                    
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert';
                     alertDiv.textContent = 'Masz aktywną drzemkę na dzisiejszej dacie';
@@ -168,4 +225,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    // Dodaj log do celów debugowania
+    console.log('DOMContentLoaded - selectedDate:', selectedDate, 'today:', today);
+    console.log('NapButton state:', napButton ? {
+        disabled: napButton.disabled,
+        classList: napButton.classList.toString(),
+        hasClickHandler: (typeof napButton.onclick === 'function')
+    } : 'Not found');
 }); 

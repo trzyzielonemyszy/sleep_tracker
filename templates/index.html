@@ -49,11 +49,7 @@
                 <h2>Drzemka nr {{ naps_today + 1 }}</h2>
             </div>
             <div class="nap-buttons">
-                <button onclick="{% if selected_date == today %}toggleNap(){% endif %}" id="napButton" 
-                        class="button primary {% if selected_date != today %}disabled{% endif %}"
-                        {% if selected_date != today %}disabled{% endif %}>
-                    START
-                </button>
+                <button id="napButton" class="button primary">START</button>
                 <a href="{{ url_for('add_record', date=selected_date.strftime('%Y-%m-%d')) }}" class="button">Dodaj wpis</a>
             </div>
         </div>
