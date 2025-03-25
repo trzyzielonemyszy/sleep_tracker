@@ -25,8 +25,8 @@
                 <textarea id="notes" name="notes" rows="4"></textarea>
             </div>
             
-            <button type="submit" class="button">Zapisz</button>
-            <a href="{{ url_for('index') }}" class="button secondary">Anuluj</a>
+            <button type="submit" class="button">Dodaj</button>
+            <a href="{{ url_for('index', date=selected_date) if selected_date else url_for('index') }}" class="button secondary">Anuluj</a>
         </form>
     </div>
 </body>
