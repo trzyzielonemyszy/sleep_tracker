@@ -1,9 +1,18 @@
 let napStartTime = null;
 let timerInterval = null;
 
+// Funkcja do pobierania parametrów z URL
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+}
+
 function toggleNap() {
     const button = document.getElementById('napButton');
     const timerContainer = document.getElementById('timer-container');
+    const selectedDate = getUrlParameter('date');
 
     if (button.textContent === 'START') {
         // Start nap
@@ -59,12 +68,12 @@ function toggleNap() {
                 // Jeśli to sen nocny, zapytaj czy chce ocenić sen teraz
                 if (data.is_night_sleep) {
                     if (confirm('Czy chcesz ocenić jakość snu teraz?')) {
-                        window.location.href = '/rate_sleep/' + data.record_id;
+                        window.location.href = '/rate_sleep/' + data.record_id + (selectedDate ? '?date=' + selectedDate : '');
                     } else {
-                        window.location.href = '/';  // Wracamy na stronę główną
+                        window.location.href = '/' + (selectedDate ? '?date=' + selectedDate : '');  // Wracamy na stronę główną
                     }
                 } else {
-                    window.location.href = '/';  // Wracamy na stronę główną
+                    window.location.href = '/' + (selectedDate ? '?date=' + selectedDate : '');  // Wracamy na stronę główną
                 }
             }
         })
@@ -104,9 +113,27 @@ function updateTimer() {
 document.addEventListener('DOMContentLoaded', function() {
     // Obsługa filtra daty
     const dateFilter = document.getElementById('dateFilter');
+    const selectedDate = getUrlParameter('date');
+    const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+    
     if (dateFilter) {
         dateFilter.addEventListener('change', function() {
-            window.location.href = '/?date=' + this.value;
+            // Jeśli drzemka jest aktywna i użytkownik chce zmienić datę, wyświetl ostrzeżenie
+            const isNapActive = localStorage.getItem('napActive') === 'true';
+            if (isNapActive && this.value !== today) {
+                if (confirm('Masz aktywną drzemkę. Zmiana daty spowoduje anulowanie bieżącej drzemki. Czy chcesz kontynuować?')) {
+                    // Użytkownik potwierdził - anuluj drzemkę i przejdź do wybranej daty
+                    localStorage.removeItem('napStartTime');
+                    localStorage.removeItem('napActive');
+                    window.location.href = '/?date=' + this.value;
+                } else {
+                    // Użytkownik anulował - przywróć poprzednią wartość selektora daty
+                    this.value = selectedDate || today;
+                    return;
+                }
+            } else {
+                window.location.href = '/?date=' + this.value;
+            }
         });
     }
     
@@ -115,16 +142,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isNapActive) {
         const storedStartTime = localStorage.getItem('napStartTime');
         if (storedStartTime) {
-            napStartTime = new Date(storedStartTime);
-            const button = document.getElementById('napButton');
-            const timerContainer = document.getElementById('timer-container');
-            
-            if (button && timerContainer) {
-                button.textContent = 'STOP';
-                button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
-                timerContainer.style.display = 'block';
-                startTimer();
-                updateTimer();
+            // Sprawdź, czy jesteśmy na dzisiejszej dacie - tylko wtedy pokaż aktywną drzemkę
+            if (!selectedDate || selectedDate === today) {
+                napStartTime = new Date(storedStartTime);
+                const button = document.getElementById('napButton');
+                const timerContainer = document.getElementById('timer-container');
+                
+                if (button && timerContainer) {
+                    button.textContent = 'STOP';
+                    button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
+                    timerContainer.style.display = 'block';
+                    startTimer();
+                    updateTimer();
+                }
+            } else {
+                // Jesteśmy na innej dacie niż dzisiejsza, ale jest aktywna drzemka
+                // Dodajmy informację dla użytkownika
+                const napControl = document.querySelector('.nap-control');
+                if (napControl) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert';
+                    alertDiv.textContent = 'Masz aktywną drzemkę na dzisiejszej dacie';
+                    napControl.prepend(alertDiv);
+                }
             }
         }
     }

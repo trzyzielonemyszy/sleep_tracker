@@ -143,6 +143,8 @@ def index():
 @app.route('/add', methods=['GET', 'POST'])
 def add_record():
     """Add new sleep record route"""
+    selected_date = request.args.get('date')
+    
     if request.method == 'POST':
         try:
             sleep_time = datetime.strptime(request.form['sleep_time'], '%Y-%m-%dT%H:%M')
@@ -150,7 +152,7 @@ def add_record():
             notes = request.form['notes']
 
             if wake_time <= sleep_time:
-                return render_template('add.html', error="Czas pobudki musi być późniejszy niż czas zaśnięcia.")
+                return render_template('add.html', error="Czas pobudki musi być późniejszy niż czas zaśnięcia.", selected_date=selected_date)
             
             # Oblicz czas trwania snu w godzinach
             sleep_duration = (wake_time - sleep_time).total_seconds() / 3600
@@ -181,14 +183,18 @@ def add_record():
             )
             db.session.add(record)
             db.session.commit()
-            return redirect(url_for('index'))
+            
+            if selected_date:
+                return redirect(url_for('index', date=selected_date))
+            else:
+                return redirect(url_for('index'))
         
         except Exception as e:
             app.logger.error(f"Error adding record: {str(e)}")
             db.session.rollback()
-            return render_template('add.html', error="Wystąpił błąd podczas dodawania zapisu.")
+            return render_template('add.html', error="Wystąpił błąd podczas dodawania zapisu.", selected_date=selected_date)
     
-    return render_template('add.html')
+    return render_template('add.html', selected_date=selected_date)
 
 @app.route('/start_nap', methods=['POST'])
 def start_nap():
@@ -290,11 +296,17 @@ def stop_nap():
 @app.route('/delete_record/<int:record_id>', methods=['POST'])
 def delete_record(record_id):
     """Delete sleep record"""
+    selected_date = request.args.get('date')
+    
     try:
         record = SleepRecord.query.get_or_404(record_id)
         db.session.delete(record)
         db.session.commit()
-        return redirect(url_for('index'))
+        
+        if selected_date:
+            return redirect(url_for('index', date=selected_date))
+        else:
+            return redirect(url_for('index'))
     except Exception as e:
         app.logger.error(f"Error deleting record: {str(e)}")
         return render_template('error.html', message="Nie udało się usunąć wpisu.")
@@ -302,6 +314,7 @@ def delete_record(record_id):
 @app.route('/edit_record/<int:record_id>', methods=['GET', 'POST'])
 def edit_record(record_id):
     """Edit sleep record"""
+    selected_date = request.args.get('date')
     record = SleepRecord.query.get_or_404(record_id)
     
     if request.method == 'POST':
@@ -321,7 +334,7 @@ def edit_record(record_id):
                     pass
             
             if record.wake_time <= record.sleep_time:
-                return render_template('edit.html', record=record, error="Czas pobudki musi być późniejszy niż czas zaśnięcia.")
+                return render_template('edit.html', record=record, error="Czas pobudki musi być późniejszy niż czas zaśnięcia.", selected_date=selected_date)
             
             # Oblicz czas trwania snu w godzinach
             sleep_duration = (record.wake_time - record.sleep_time).total_seconds() / 3600
@@ -347,17 +360,22 @@ def edit_record(record_id):
                     record.notes = f"Drzemka nr {naps_today + 1}"
             
             db.session.commit()
-            return redirect(url_for('index'))
+            
+            if selected_date:
+                return redirect(url_for('index', date=selected_date))
+            else:
+                return redirect(url_for('index'))
         except Exception as e:
             app.logger.error(f"Error editing record: {str(e)}")
             db.session.rollback()
-            return render_template('edit.html', record=record, error="Wystąpił błąd podczas edycji wpisu.")
+            return render_template('edit.html', record=record, error="Wystąpił błąd podczas edycji wpisu.", selected_date=selected_date)
     
-    return render_template('edit.html', record=record)
+    return render_template('edit.html', record=record, selected_date=selected_date)
 
 @app.route('/rate_sleep/<int:record_id>', methods=['GET', 'POST'])
 def rate_sleep(record_id):
     """Rate sleep quality"""
+    selected_date = request.args.get('date')
     record = SleepRecord.query.get_or_404(record_id)
     
     # Check if this is a night sleep (longer than 4 hours)
@@ -372,15 +390,19 @@ def rate_sleep(record_id):
                 record.sleep_rating = rating
                 record.is_rated = True
                 db.session.commit()
-                return redirect(url_for('index'))
+                
+                if selected_date:
+                    return redirect(url_for('index', date=selected_date))
+                else:
+                    return redirect(url_for('index'))
             else:
-                return render_template('rate_sleep.html', record=record, error="Ocena musi być w zakresie 1-5.")
+                return render_template('rate_sleep.html', record=record, error="Ocena musi być w zakresie 1-5.", selected_date=selected_date)
         except Exception as e:
             app.logger.error(f"Error rating sleep: {str(e)}")
             db.session.rollback()
-            return render_template('rate_sleep.html', record=record, error="Wystąpił błąd podczas oceny snu.")
+            return render_template('rate_sleep.html', record=record, error="Wystąpił błąd podczas oceny snu.", selected_date=selected_date)
     
-    return render_template('rate_sleep.html', record=record)
+    return render_template('rate_sleep.html', record=record, selected_date=selected_date)
 
 @app.errorhandler(404)
 def not_found_error(error):

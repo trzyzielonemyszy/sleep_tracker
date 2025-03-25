@@ -44,6 +44,15 @@ h1 {
     transform: scale(0.98);
 }
 
+.button.disabled {
+    background-color: #e0e0e0;
+    color: #707070;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    border: 1px solid #d0d0d0;
+}
+
 .button.secondary {
     background-color: #808080;
 }
@@ -149,6 +158,12 @@ textarea {
     min-width: 120px;
 }
 
+.button.primary.disabled {
+    background-color: #e0e0e0;
+    color: #707070;
+    border: 1px solid #d0d0d0;
+}
+
 .timer-container {
     margin: 20px 0;
 }
@@ -223,11 +238,34 @@ textarea {
     font-size: 16px;
 }
 
+.alert {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #ffeeba;
+}
+
 .date-picker-container {
     display: flex;
     align-items: center;
     width: 100%;
     max-width: 300px;
+}
+
+.date-different {
+    background-color: #ffecec;
+    border: 2px solid #dc3545;
+}
+
+.date-different input {
+    background-color: #ffecec;
+    border-color: #dc3545;
+    color: #dc3545;
+    font-weight: bold;
 }
 
 .duration {
@@ -246,6 +284,12 @@ textarea {
         width: 100%;
         text-align: center;
         padding: 12px 20px;
+    }
+    
+    .button.disabled,
+    .button.primary.disabled {
+        width: 100%;
+        text-align: center;
     }
     
     .time-info {
