@@ -19,6 +19,10 @@ function toggleNap() {
                 console.log('Nap start time (local):', napStartTime.toLocaleString());
                 console.log('Nap start time (ISO):', napStartTime.toISOString());
                 
+                // Zapisujemy czas rozpoczęcia drzemki w localStorage
+                localStorage.setItem('napStartTime', napStartTime.toISOString());
+                localStorage.setItem('napActive', 'true');
+                
                 button.textContent = 'STOP';
                 button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
                 timerContainer.style.display = 'block';
@@ -47,6 +51,10 @@ function toggleNap() {
         .then(data => {
             if (data.status === 'success') {
                 stopTimer();
+                
+                // Usuwamy dane o drzemce z localStorage
+                localStorage.removeItem('napStartTime');
+                localStorage.removeItem('napActive');
                 
                 // Jeśli to sen nocny, zapytaj czy chce ocenić sen teraz
                 if (data.is_night_sleep) {
@@ -92,11 +100,32 @@ function updateTimer() {
     document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
 }
 
+// Sprawdzamy przy ładowaniu strony, czy drzemka była aktywna
 document.addEventListener('DOMContentLoaded', function() {
+    // Obsługa filtra daty
     const dateFilter = document.getElementById('dateFilter');
     if (dateFilter) {
         dateFilter.addEventListener('change', function() {
             window.location.href = '/?date=' + this.value;
         });
+    }
+    
+    // Sprawdzamy, czy drzemka jest aktywna
+    const isNapActive = localStorage.getItem('napActive') === 'true';
+    if (isNapActive) {
+        const storedStartTime = localStorage.getItem('napStartTime');
+        if (storedStartTime) {
+            napStartTime = new Date(storedStartTime);
+            const button = document.getElementById('napButton');
+            const timerContainer = document.getElementById('timer-container');
+            
+            if (button && timerContainer) {
+                button.textContent = 'STOP';
+                button.style.backgroundColor = '#dc3545'; // czerwony kolor dla STOP
+                timerContainer.style.display = 'block';
+                startTimer();
+                updateTimer();
+            }
+        }
     }
 }); 
